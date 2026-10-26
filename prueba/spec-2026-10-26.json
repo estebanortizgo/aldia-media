@@ -1,0 +1,27 @@
+{
+  "fecha": "2026-10-26",
+  "posts": [
+    {
+      "n": 1,
+      "etiqueta": "Voz con IA",
+      "empresa": "Block",
+      "logo_empresa": "https://block.xyz/apple-touch-icon-reskin.png",
+      "visual": {"tipo": "foto", "url": "https://block.xyz/dessa/_media/d4d3658729d667432ad9/assets/marketing/variants/v3.jpg", "zoom": 1.4},
+      "grande": false,
+      "titular": "Block presenta <em>Dessa</em>, una IA de voz que conversa como persona",
+      "bajada": "Escucha y habla al mismo tiempo, así que puede interrumpirte o decir “ajá” mientras hablas. Se entrenó solo con voz humana y corre en una laptop. Por ahora solo la prueban investigadores.",
+      "fuente": "block.xyz/dessa"
+    },
+    {
+      "n": 2,
+      "etiqueta": "Modelos",
+      "empresa": "Kimi · Moonshot AI",
+      "logo_empresa": "https://upload.wikimedia.org/wikipedia/commons/4/42/Kimi_logo_%282025%29.svg",
+      "visual": {"tipo": "icono", "url": "https://upload.wikimedia.org/wikipedia/commons/4/42/Kimi_logo_%282025%29.svg"},
+      "grande": false,
+      "titular": "Kimi K3.1 Pro lee <em>libros enteros</em> de una sola vez",
+      "bajada": "La startup china Moonshot AI lanzó un modelo que procesa hasta 1 millón de tokens a la vez. Ya se puede usar por API y la empresa promete liberarlo gratis antes del 4 de noviembre.",
+      "fuente": "platform.kimi.ai"
+    }
+  ]
+}
