@@ -87,7 +87,7 @@ const titularSeguro = (t) => esc(t).replace(/&lt;em&gt;/g, '<em>').replace(/&lt;
 /** Descarga una imagen a la carpeta temporal y devuelve su ruta local (Chromium no siempre sigue redirecciones de otros sitios). */
 function descargar(url, destino) {
   if (!url) return '';
-  if (!/^https?:\/\//.test(url)) return path.resolve(url);
+  if (!/^https?:\/\//.test(url)) return path.resolve(RAIZ, url); // ruta del repo, p. ej. logos/kimi.svg
   try {
     execFileSync('curl', ['-fsSL', '--max-time', '30', '-A', 'AlDiaGenerador/1.0 (+https://github.com/estebanortizgo/aldia-media)', '-o', destino, url]);
   } catch (error) {
@@ -104,8 +104,9 @@ function descargar(url, destino) {
 
 function html(post, tmp) {
   const v = post.visual || {};
-  const img = descargar(v.url, path.join(tmp, `visual-${post.n}${path.extname(new URL(v.url || 'https://x/a.jpg').pathname) || '.img'}`));
-  const logoEmpresa = post.logo_empresa ? descargar(post.logo_empresa, path.join(tmp, `logo-${post.n}${path.extname(new URL(post.logo_empresa).pathname) || '.img'}`)) : '';
+  const ext = (url) => path.extname(String(url || '').split(/[?#]/)[0]) || '.img';
+  const img = descargar(v.url, path.join(tmp, `visual-${post.n}${ext(v.url)}`));
+  const logoEmpresa = post.logo_empresa ? descargar(post.logo_empresa, path.join(tmp, `logo-${post.n}${ext(post.logo_empresa)}`)) : '';
   const dentro = {
     foto: `<img class="foto" style="transform:scale(${Number(v.zoom) || 1})" src="file://${img}"><div class="velo"></div>`,
     icono: `<img class="icono" src="file://${img}">`,
