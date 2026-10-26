@@ -88,7 +88,17 @@ const titularSeguro = (t) => esc(t).replace(/&lt;em&gt;/g, '<em>').replace(/&lt;
 function descargar(url, destino) {
   if (!url) return '';
   if (!/^https?:\/\//.test(url)) return path.resolve(url);
-  execFileSync('curl', ['-sSL', '--max-time', '30', '-A', 'Mozilla/5.0 (AlDia generador)', '-o', destino, url]);
+  try {
+    execFileSync('curl', ['-fsSL', '--max-time', '30', '-A', 'AlDiaGenerador/1.0 (+https://github.com/estebanortizgo/aldia-media)', '-o', destino, url]);
+  } catch (error) {
+    throw new Error(`No pude descargar ${url}: ${String(error.stderr || error.message).trim()}`);
+  }
+  // Solo acepta imágenes de verdad (PNG, JPEG, GIF, WebP o SVG), no páginas de error
+  const inicio = fs.readFileSync(destino).subarray(0, 256);
+  const texto = inicio.toString('utf8').trimStart();
+  const esImagen = inicio[0] === 0x89 || (inicio[0] === 0xff && inicio[1] === 0xd8) || texto.startsWith('GIF8')
+    || (texto.startsWith('RIFF') && inicio.subarray(8, 12).toString() === 'WEBP') || /^(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*<svg/i.test(texto);
+  if (!esImagen) throw new Error(`Lo que bajó de ${url} no es una imagen (empieza con: ${JSON.stringify(texto.slice(0, 60))})`);
   return destino;
 }
 
@@ -125,6 +135,8 @@ async function main() {
     fs.writeFileSync(archivoHtml, html(post, tmp));
     await pagina.goto(`file://${archivoHtml}`, { waitUntil: 'load' });
     await pagina.evaluate(() => document.fonts.ready);
+    const rotas = await pagina.evaluate(() => [...document.images].filter((i) => !i.complete || !i.naturalWidth).map((i) => i.src));
+    if (rotas.length) throw new Error(`Post ${post.n}: no cargaron estas imágenes: ${rotas.join(', ')}`);
     const destino = path.join(salida, `aldia-${spec.fecha}-${post.n}.jpg`);
     await pagina.screenshot({ path: destino, type: 'jpeg', quality: 90 });
     console.log(destino);
