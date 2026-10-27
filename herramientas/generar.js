@@ -67,18 +67,30 @@ body>*{position:relative}
   border-radius:999px;padding:12px 24px 12px 14px;font-weight:800;font-size:26px;z-index:2}
 .panel .chip img{width:34px;height:34px;object-fit:contain}
 .panel .chip .ojos i{background:${C.visor};width:8px;height:20px}
+.fecha{font-weight:800;font-size:24px;letter-spacing:4px;text-transform:uppercase;color:${C.grafito};margin-top:40px}
+.fecha+.titular{margin-top:14px}
 .titular{text-wrap:balance;font-weight:900;font-size:68px;line-height:1.02;letter-spacing:-1.4px;margin-top:44px}
 .titular em{font-style:normal;background:linear-gradient(100deg,${C.grafito} 0%,${C.plata} 55%,${C.grafito} 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent}
 .bajada{font-weight:500;font-size:31px;line-height:1.36;margin-top:22px;color:${C.grafito}}
 .compacta .panel{flex:none;height:380px;min-height:0}
 .compacta .panel img.icono{width:230px;height:230px;border-radius:52px}
-.compacta .titular{font-size:92px;line-height:1.0;letter-spacing:-2px;margin-top:auto;padding-top:56px}
+.compacta .fecha{margin-top:auto;padding-top:52px}
+.compacta .titular{font-size:92px;line-height:1.0;letter-spacing:-2px}
 .compacta .bajada{font-size:34px;margin-top:30px}
 .spacer{flex:1}
 .pie{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:24px;color:${C.grafito}}
 .pie .sw{font-weight:900;letter-spacing:3px;color:${C.visor}}
 `;
+
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** "2026-10-26" → "lunes 26 de octubre, 2026" (la fecha de la noticia, sin depender de la zona horaria de la máquina). */
+function fechaLarga(iso) {
+  const [a, m, d] = iso.split('-').map(Number);
+  const dia = new Date(Date.UTC(a, m - 1, d)).getUTCDay();
+  return `${DIAS[dia]} ${d} de ${MESES[m - 1]}, ${a}`;
+}
 
 const esc = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // En titular solo se permite <em>…</em>
@@ -102,7 +114,7 @@ function descargar(url, destino) {
   return destino;
 }
 
-function html(post, tmp) {
+function html(post, tmp, fecha) {
   const v = post.visual || {};
   const ext = (url) => path.extname(String(url || '').split(/[?#]/)[0]) || '.img';
   const img = descargar(v.url, path.join(tmp, `visual-${post.n}${ext(v.url)}`));
@@ -118,9 +130,22 @@ function html(post, tmp) {
 <div class="top"><div class="marca"><img src="file://${LOGO}">Al dIA</div>
 <span class="visor"><span class="ojos"><i></i><i></i></span>${esc(post.etiqueta)}</span></div>
 <div class="panel">${dentro}<div class="chip">${marcaEmpresa}${esc(post.empresa)}</div></div>
+<div class="fecha">${esc(fechaLarga(fecha))}</div>
 <div class="titular">${titularSeguro(post.titular)}</div><p class="bajada">${esc(post.bajada)}</p><div style="height:48px"></div>
 <div class="spacer"></div>
-<div class="pie"><span>Fuente: ${esc(post.fuente)}</span><span class="sw">${USUARIO}</span></div></body></html>`;
+<div class="pie"><span>Fuente: ${esc(post.fuente)}</span><span class="sw">${USUARIO}</span></div>
+<script>
+// Si el texto no cabe, achica el titular (y si hace falta la bajada) hasta dejar aire sobre el pie
+document.fonts.ready.then(() => {
+  const pie = document.querySelector('.pie'), baj = document.querySelector('.bajada'), tit = document.querySelector('.titular');
+  const choca = () => baj.getBoundingClientRect().bottom > pie.getBoundingClientRect().top - 40 || pie.getBoundingClientRect().bottom > 1350 - 60;
+  let t = parseFloat(getComputedStyle(tit).fontSize);
+  while (choca() && t > 56) { t -= 2; tit.style.fontSize = t + 'px'; }
+  let b = parseFloat(getComputedStyle(baj).fontSize);
+  while (choca() && b > 24) { b -= 1; baj.style.fontSize = b + 'px'; }
+  document.body.dataset.ajustado = '1';
+});
+</script></body></html>`;
 }
 
 async function main() {
@@ -133,9 +158,10 @@ async function main() {
   const pagina = await navegador.newPage({ viewport: { width: 1080, height: 1350 } });
   for (const post of spec.posts) {
     const archivoHtml = path.join(tmp, `post-${post.n}.html`);
-    fs.writeFileSync(archivoHtml, html(post, tmp));
+    fs.writeFileSync(archivoHtml, html(post, tmp, spec.fecha));
     await pagina.goto(`file://${archivoHtml}`, { waitUntil: 'load' });
     await pagina.evaluate(() => document.fonts.ready);
+    await pagina.waitForFunction(() => document.body.dataset.ajustado === '1', null, { timeout: 10000 });
     const rotas = await pagina.evaluate(() => [...document.images].filter((i) => !i.complete || !i.naturalWidth).map((i) => i.src));
     if (rotas.length) throw new Error(`Post ${post.n}: no cargaron estas imágenes: ${rotas.join(', ')}`);
     const destino = path.join(salida, `aldia-${spec.fecha}-${post.n}.jpg`);
